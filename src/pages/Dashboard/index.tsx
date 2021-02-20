@@ -1,124 +1,174 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Image, ScrollView } from 'react-native';
 
-import Header from '../../components/Header';
+import Icon from 'react-native-vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
+import Logo from '../../assets/logo-header.png';
+import SearchInput from '../../components/SearchInput';
 
 import api from '../../services/api';
+import formatValue from '../../utils/formatValue';
 
-import Food from '../../components/Food';
-import ModalAddFood from '../../components/ModalAddFood';
-import ModalEditFood from '../../components/ModalEditFood';
+import {
+  Container,
+  Header,
+  FilterContainer,
+  Title,
+  CategoryContainer,
+  CategorySlider,
+  CategoryItem,
+  CategoryItemTitle,
+  FoodsContainer,
+  FoodList,
+  Food,
+  FoodImageContainer,
+  FoodContent,
+  FoodTitle,
+  FoodDescription,
+  FoodPricing,
+} from './styles';
 
-import { FoodsContainer } from './styles';
-
-interface IFoodPlate {
+interface Food {
   id: number;
   name: string;
-  image: string;
-  price: string;
   description: string;
-  available: boolean;
+  price: number;
+  thumbnail_url: string;
+  formattedPrice: string;
+}
+
+interface Category {
+  id: number;
+  title: string;
+  image_url: string;
 }
 
 const Dashboard: React.FC = () => {
-  const [foods, setFoods] = useState<IFoodPlate[]>([]);
-  const [editingFood, setEditingFood] = useState<IFoodPlate>({} as IFoodPlate);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [foods, setFoods] = useState<Food[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<
+    number | undefined
+  >();
+  const [searchValue, setSearchValue] = useState('');
+
+  const navigation = useNavigation();
+
+  async function handleNavigate(id: number): Promise<void> {
+    navigation.navigate('FoodDetails', {
+      id,
+    });
+  }
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      const response = await api.get('/foods');
-
-      setFoods(response.data);
-    }
-
-    loadFoods();
-  }, []);
-
-  async function handleAddFood(
-    food: Omit<IFoodPlate, 'id' | 'available'>,
-  ): Promise<void> {
-    try {
-      const response = await api.post('/foods', {
-        ...food,
-        available: true,
-      });
-
-      setFoods([...foods, response.data]);
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async function handleUpdateFood(
-    food: Omit<IFoodPlate, 'id' | 'available'>,
-  ): Promise<void> {
-    try {
-      const response = await api.put(`/foods/${editingFood.id}`, {
-        ...editingFood,
-        ...food,
+      const response = await api.get('/foods', {
+        params: {
+          category_like: selectedCategory,
+          name_like: searchValue,
+        },
       });
 
       setFoods(
-        foods.map(mappedFood =>
-          mappedFood.id === editingFood.id ? { ...response.data } : mappedFood,
-        ),
+        response.data.map((food: Food) => ({
+          ...food,
+          formattedPrice: formatValue(food.price),
+        })),
       );
-    } catch (err) {
-      console.log(err);
     }
-  }
 
-  async function handleDeleteFood(id: number): Promise<void> {
-    try {
-      await api.delete(`/foods/${id}`);
+    loadFoods();
+  }, [selectedCategory, searchValue]);
 
-      setFoods(foods.filter(food => food.id !== id));
-    } catch (err) {
-      console.log(err);
+  useEffect(() => {
+    async function loadCategories(): Promise<void> {
+      const response = await api.get('/categories');
+
+      setCategories(response.data);
     }
-  }
 
-  function toggleModal(): void {
-    setModalOpen(!modalOpen);
-  }
+    loadCategories();
+  }, []);
 
-  function toggleEditModal(): void {
-    setEditModalOpen(!editModalOpen);
-  }
-
-  function handleEditFood(food: IFoodPlate): void {
-    setEditingFood(food);
-    toggleEditModal();
+  function handleSelectCategory(id: number): void {
+    if (selectedCategory === id) {
+      setSelectedCategory(undefined);
+    } else {
+      setSelectedCategory(id);
+    }
   }
 
   return (
-    <>
-      <Header openModal={toggleModal} />
-      <ModalAddFood
-        isOpen={modalOpen}
-        setIsOpen={toggleModal}
-        handleAddFood={handleAddFood}
-      />
-      <ModalEditFood
-        isOpen={editModalOpen}
-        setIsOpen={toggleEditModal}
-        editingFood={editingFood}
-        handleUpdateFood={handleUpdateFood}
-      />
-
-      <FoodsContainer data-testid="foods-list">
-        {foods &&
-          foods.map(food => (
-            <Food
-              key={food.id}
-              food={food}
-              handleDelete={handleDeleteFood}
-              handleEditFood={handleEditFood}
-            />
-          ))}
-      </FoodsContainer>
-    </>
+    <Container>
+      <Header>
+        <Image source={Logo} />
+        <Icon
+          name="log-out"
+          size={24}
+          color="#FFB84D"
+          onPress={() => navigation.navigate('Home')}
+        />
+      </Header>
+      <FilterContainer>
+        <SearchInput
+          value={searchValue}
+          onChangeText={setSearchValue}
+          placeholder="Qual comida você procura?"
+        />
+      </FilterContainer>
+      <ScrollView>
+        <CategoryContainer>
+          <Title>Categorias</Title>
+          <CategorySlider
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+            }}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {categories.map(category => (
+              <CategoryItem
+                key={category.id}
+                isSelected={category.id === selectedCategory}
+                onPress={() => handleSelectCategory(category.id)}
+                activeOpacity={0.6}
+                testID={`category-${category.id}`}
+              >
+                <Image
+                  style={{ width: 56, height: 56 }}
+                  source={{ uri: category.image_url }}
+                />
+                <CategoryItemTitle>{category.title}</CategoryItemTitle>
+              </CategoryItem>
+            ))}
+          </CategorySlider>
+        </CategoryContainer>
+        <FoodsContainer>
+          <Title>Pratos</Title>
+          <FoodList>
+            {foods.map(food => (
+              <Food
+                key={food.id}
+                onPress={() => handleNavigate(food.id)}
+                activeOpacity={0.6}
+                testID={`food-${food.id}`}
+              >
+                <FoodImageContainer>
+                  <Image
+                    style={{ width: 88, height: 88 }}
+                    source={{ uri: food.thumbnail_url }}
+                  />
+                </FoodImageContainer>
+                <FoodContent>
+                  <FoodTitle>{food.name}</FoodTitle>
+                  <FoodDescription>{food.description}</FoodDescription>
+                  <FoodPricing>{food.formattedPrice}</FoodPricing>
+                </FoodContent>
+              </Food>
+            ))}
+          </FoodList>
+        </FoodsContainer>
+      </ScrollView>
+    </Container>
   );
 };
 

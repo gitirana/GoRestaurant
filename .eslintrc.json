@@ -1,8 +1,7 @@
 {
   "env": {
-    "browser": true,
     "es6": true,
-    "jest": true
+    "browser": true
   },
   "extends": [
     "plugin:react/recommended",
@@ -23,9 +22,17 @@
     "ecmaVersion": 2018,
     "sourceType": "module"
   },
-  "plugins": ["react", "react-hooks", "@typescript-eslint", "prettier"],
+  "plugins": [
+    "react",
+    "react-hooks",
+    "@typescript-eslint",
+    "prettier"
+  ],
   "rules": {
+    "camelcase": "off",
     "prettier/prettier": "error",
+    "no-use-before-define": "off",
+    "no-underscore-dangle": "off",
     "react/jsx-one-expression-per-line": "off",
     "react/jsx-props-no-spreading": "off",
     "react/prop-types": "off",
@@ -35,12 +42,6 @@
     "react/jsx-filename-extension": [1, { "extensions": [".tsx"] }],
     "import/prefer-default-export": "off",
     "import/no-duplicates": "off",
-    "@typescript-eslint/interface-name-prefix": [
-      "error",
-      {
-        "prefixWithI": "always"
-      }
-    ],
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/explicit-function-return-type": [
       "error",
